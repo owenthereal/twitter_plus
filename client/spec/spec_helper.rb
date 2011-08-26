@@ -26,11 +26,13 @@ RSpec.configure do |config|
   config.use_transactional_fixtures = true
 
   config.before :all do
+    @semaphore = Mutex.new
     DRb.start_service
     @remote_base = DRbObject.new nil, "druby://localhost:8000"
   end
 
   config.before :each do
+    @semaphore.lock
     @remote_base.connection.increment_open_transactions
     @remote_base.connection.transaction_joinable = false
     @remote_base.connection.begin_db_transaction
@@ -40,5 +42,6 @@ RSpec.configure do |config|
     @remote_base.connection.rollback_db_transaction
     @remote_base.connection.decrement_open_transactions
     @remote_base.clear_active_connections!
+    @semaphore.unlock
   end
 end
